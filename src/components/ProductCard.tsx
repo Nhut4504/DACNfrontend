@@ -1,4 +1,4 @@
-// src/components/ProductCard.tsx - Enhanced with Flash Sale Support
+// src/components/ProductCard.tsx - Enhanced with Flash Sale Support & Mobile Responsive
 import React, { useState, memo, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -44,18 +44,15 @@ interface Product {
     color: string;
     quantity: number;
   }>;
-  // Flash Sale fields - Support multiple formats from backend
   flashSale?: FlashSaleInfo;
   isFlashSale?: boolean;
-  effectivePrice?: number; // Price after flash sale from backend
+  effectivePrice?: number;
   discountPrice?: number;
   originalPrice?: number;
   discountPercentage?: number;
-  // Trending fields
   trendingScore?: number;
   trendingUsers?: number;
   trendingOrders?: number;
-  // Recommendation fields
   recommendationType?: string;
   reason?: string;
   confidence?: number;
@@ -103,10 +100,8 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
   const { user } = useAuth();
   const { addToCart } = useCart();
 
-  // Determine if product has flash sale and get correct prices
   const hasFlashSale = product.isFlashSale || !!product.flashSale;
   
-  // Get effective price (prioritize effectivePrice from backend)
   const getEffectivePrice = () => {
     if (product.effectivePrice !== undefined) {
       return product.effectivePrice;
@@ -136,7 +131,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
   const discountPercentage = getDiscountPercentage();
   const hasDiscount = hasFlashSale && effectivePrice < originalPrice;
 
-  // Get recommendation reason (from product or prop)
   const getRecommendationReason = () => {
     if (product.reason) return product.reason;
     if (recommendationData?.reason) return recommendationData.reason;
@@ -156,12 +150,10 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
 
   const recommendationReason = getRecommendationReason();
 
-  // Update local wishlist state when prop changes
   useEffect(() => {
     setIsWishlisted(propIsWishlisted);
   }, [propIsWishlisted]);
 
-  // Track view when component mounts
   useEffect(() => {
     viewStartTime.current = Date.now();
     
@@ -175,7 +167,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
     };
   }, [product._id, onProductView]);
 
-  // Flash sale countdown timer
   useEffect(() => {
     if (!hasFlashSale) return;
 
@@ -186,12 +177,10 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
       let diff: number;
       
       if (typeof endDate === 'string') {
-        // It's an end date string
         const end = new Date(endDate);
         const now = new Date();
         diff = end.getTime() - now.getTime();
       } else if (typeof endDate === 'number') {
-        // It's time remaining in seconds
         diff = endDate * 1000;
       } else {
         return;
@@ -231,7 +220,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
     };
   }, [hasFlashSale, product.flashSale]);
 
-  // Handle image hover cycling
   const handleMouseEnter = () => {
     setIsHovered(true);
     if (product.images.length > 1) {
@@ -252,7 +240,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
     }
   };
 
-  // Handle wishlist toggle
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -303,7 +290,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
     }
   };
 
-  // Handle add to cart with flash sale price
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -322,7 +308,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
       return;
     }
 
-    // Check flash sale availability
     if (hasFlashSale && product.flashSale?.available !== undefined && product.flashSale.available <= 0) {
       showToast('Sản phẩm Flash Sale đã hết', 'error');
       return;
@@ -384,7 +369,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
 
   const currentImage = product.images[currentImageIndex] || product.images[0] || '/placeholder.jpg';
 
-  // Calculate progress for flash sale
   const getProgressPercentage = () => {
     if (!product.flashSale) return 0;
     const sold = product.flashSale.soldQuantity || 0;
@@ -397,7 +381,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
 
   return (
     <div 
-      className="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden"
+      className="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -416,48 +400,43 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
         </Link>
 
         {/* Badges Container - Top Left */}
-        <div className="absolute top-3 left-3 z-20 space-y-2">
-          {/* Flash Sale Badge */}
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-20 space-y-1 sm:space-y-2 max-w-[75%]">
           {hasFlashSale && (
             <div className="animate-pulse">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1.5 rounded-full flex items-center space-x-1 shadow-lg">
-                <BoltIcon className="w-4 h-4" />
-                <span className="text-sm font-bold">-{Math.round(discountPercentage)}%</span>
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-full inline-flex items-center space-x-1 shadow-lg">
+                <BoltIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-[11px] sm:text-sm font-bold">-{Math.round(discountPercentage)}%</span>
               </div>
               {timeRemaining && (
-                <div className="mt-1 bg-black/80 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
-                  <ClockIcon className="w-3 h-3" />
+                <div className="mt-1 bg-black/80 text-white text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full flex items-center space-x-1 w-fit">
+                  <ClockIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   <span>{timeRemaining}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Recommendation Badge */}
           {!hasFlashSale && showRecommendationReason && recommendationReason && (
-            <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow">
+            <div className="bg-blue-500 text-white text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 rounded-full shadow truncate">
               {recommendationReason}
             </div>
           )}
 
-          {/* Almost Sold Out Badge */}
           {hasFlashSale && isAlmostSoldOut && (
-            <div className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
+            <div className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full animate-bounce w-fit">
               🔥 Sắp hết
             </div>
           )}
         </div>
 
         {/* Badges Container - Top Right */}
-        <div className="absolute top-3 right-3 z-20 space-y-2">
-          {/* Trending Badge */}
+        <div className="hidden sm:block absolute top-3 right-3 z-20 space-y-2">
           {product.trendingUsers && product.trendingUsers > 10 && (
             <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow">
               👀 {product.trendingUsers} người xem
             </div>
           )}
 
-          {/* Recommendation Score */}
           {product.recommendedByUsers && product.recommendedByUsers > 5 && (
             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow">
               👥 {product.recommendedByUsers} người mua
@@ -465,10 +444,33 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
           )}
         </div>
 
-        {/* Overlay Actions */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300">
+        {/* Mobile Quick Action Icons */}
+        <div className="sm:hidden absolute top-2 right-2 z-20 flex flex-col gap-1.5">
+          <button
+            onClick={handleWishlistToggle}
+            disabled={wishlistLoading}
+            className="w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow"
+            title="Yêu thích"
+          >
+            {isWishlisted ? (
+              <HeartSolidIcon className="w-4 h-4 text-red-500" />
+            ) : (
+              <HeartIcon className="w-4 h-4 text-gray-600" />
+            )}
+          </button>
+          <button
+            onClick={handleAddToCart}
+            disabled={cartLoading}
+            className="w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow"
+            title="Thêm vào giỏ"
+          >
+            <ShoppingCartIcon className="w-4 h-4 text-blue-600" />
+          </button>
+        </div>
+
+        {/* Desktop Overlay Actions */}
+        <div className="hidden sm:block absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300">
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-3">
-            {/* Wishlist Button */}
             <button
               onClick={handleWishlistToggle}
               disabled={wishlistLoading}
@@ -486,7 +488,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
               )}
             </button>
 
-            {/* Quick Add to Cart */}
             <button
               onClick={handleAddToCart}
               disabled={cartLoading}
@@ -503,7 +504,6 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
             </button>
           </div>
 
-          {/* Quick View Button */}
           <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Link 
               to={`/product/${product._id}`}
@@ -516,14 +516,14 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
 
         {/* Image Indicators */}
         {product.images.length > 1 && (
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+          <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
             {product.images.map((_, index) => (
               <div
                 key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                className={`h-1 sm:h-1.5 rounded-full transition-all ${
                   index === currentImageIndex 
-                    ? 'bg-white w-3' 
-                    : 'bg-white/50'
+                    ? 'bg-white w-2.5 sm:w-3' 
+                    : 'bg-white/50 w-1 sm:w-1.5'
                 }`}
               />
             ))}
@@ -532,116 +532,118 @@ const ProductCard: React.FC<ProductCardProps> = memo(({
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
-        <Link to={`/product/${product._id}`}>
-          <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors min-h-[48px]">
-            {product.name}
-          </h3>
-        </Link>
+      <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between">
+        <div>
+          <Link to={`/product/${product._id}`}>
+            <h3 className="font-medium text-xs sm:text-base text-gray-900 mb-1 sm:mb-2 line-clamp-2 hover:text-blue-600 transition-colors min-h-[32px] sm:min-h-[48px]">
+              {product.name}
+            </h3>
+          </Link>
 
-        {/* Rating */}
-        <div className="flex items-center mb-2">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <StarIcon
-                key={i}
-                className={`h-4 w-4 ${
-                  i < Math.floor(product.rating) 
-                    ? 'text-yellow-400 fill-current' 
-                    : 'text-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-          <span className="ml-1 text-sm text-gray-600">
-            {product.rating.toFixed(1)} ({product.totalReviews})
-          </span>
-        </div>
-
-        {/* Flash Sale Progress Bar */}
-        {hasFlashSale && product.flashSale?.maxQuantity && (
-          <div className="mb-3">
-            <div className="flex justify-between text-xs text-gray-600 mb-1">
-              <span className="font-medium">
-                Đã bán: {product.flashSale.soldQuantity || 0}
-              </span>
-              <span className={isAlmostSoldOut ? 'text-red-600 font-bold' : ''}>
-                Còn: {product.flashSale.available || (product.flashSale.maxQuantity - (product.flashSale.soldQuantity || 0))}
-              </span>
+          {/* Rating */}
+          <div className="flex items-center mb-1.5 sm:mb-2">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <StarIcon
+                  key={i}
+                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                    i < Math.floor(product.rating) 
+                      ? 'text-yellow-400 fill-current' 
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isAlmostSoldOut 
-                    ? 'bg-gradient-to-r from-red-500 to-red-600 animate-pulse' 
-                    : 'bg-gradient-to-r from-orange-400 to-red-500'
-                }`}
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
+            <span className="ml-1 text-[11px] sm:text-sm text-gray-600">
+              {product.rating.toFixed(1)} ({product.totalReviews})
+            </span>
           </div>
-        )}
 
-        {/* Price */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            {hasDiscount ? (
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xl font-bold text-red-600">
-                    {effectivePrice.toLocaleString('vi-VN')}₫
-                  </span>
-                  <span className="text-sm text-gray-400 line-through">
-                    {originalPrice.toLocaleString('vi-VN')}₫
-                  </span>
-                </div>
-                <div className="text-xs text-green-600 font-medium mt-1">
-                  Tiết kiệm {(originalPrice - effectivePrice).toLocaleString('vi-VN')}₫
-                </div>
+          {/* Flash Sale Progress Bar */}
+          {hasFlashSale && product.flashSale?.maxQuantity && (
+            <div className="mb-2 sm:mb-3">
+              <div className="flex justify-between text-[10px] sm:text-xs text-gray-600 mb-1">
+                <span className="font-medium">
+                  Đã bán: {product.flashSale.soldQuantity || 0}
+                </span>
+                <span className={isAlmostSoldOut ? 'text-red-600 font-bold' : ''}>
+                  Còn: {product.flashSale.available || (product.flashSale.maxQuantity - (product.flashSale.soldQuantity || 0))}
+                </span>
               </div>
-            ) : (
-              <span className="text-xl font-bold text-gray-900">
-                {effectivePrice.toLocaleString('vi-VN')}₫
-              </span>
-            )}
-          </div>
-          
-          {/* Confidence Score for Recommendations */}
-          {(product.confidence || recommendationData?.confidence) && (
-            <div className="text-right">
-              <div className="text-xs text-gray-500">
-                Độ phù hợp
-              </div>
-              <div className="text-sm font-semibold text-blue-600">
-                {Math.round((product.confidence || recommendationData?.confidence || 0) * 100)}%
+              <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isAlmostSoldOut 
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 animate-pulse' 
+                      : 'bg-gradient-to-r from-orange-400 to-red-500'
+                  }`}
+                  style={{ width: `${progressPercentage}%` }}
+                />
               </div>
             </div>
           )}
         </div>
 
-        {/* Category/Brand */}
-        {(product.category || product.brand) && (
-          <div className="text-xs text-gray-500 flex items-center">
-            {product.brand && (
-              <span className="truncate max-w-[100px]" title={product.brand}>
-                {product.brand}
-              </span>
-            )}
-            {product.brand && product.category && <span className="mx-1">•</span>}
-            {product.category && (
-              <span className="truncate max-w-[100px]" title={product.category}>
-                {product.category}
-              </span>
+        <div>
+          {/* Price */}
+          <div className="flex items-end justify-between mb-1.5 sm:mb-2 gap-1">
+            <div className="min-w-0">
+              {hasDiscount ? (
+                <div>
+                  <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                    <span className="text-sm sm:text-xl font-bold text-red-600">
+                      {effectivePrice.toLocaleString('vi-VN')}₫
+                    </span>
+                    <span className="text-[11px] sm:text-sm text-gray-400 line-through">
+                      {originalPrice.toLocaleString('vi-VN')}₫
+                    </span>
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-green-600 font-medium mt-0.5 truncate">
+                    Tiết kiệm {(originalPrice - effectivePrice).toLocaleString('vi-VN')}₫
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm sm:text-xl font-bold text-gray-900">
+                  {effectivePrice.toLocaleString('vi-VN')}₫
+                </span>
+              )}
+            </div>
+            
+            {(product.confidence || recommendationData?.confidence) && (
+              <div className="text-right flex-shrink-0">
+                <div className="text-[10px] sm:text-xs text-gray-500">
+                  Phù hợp
+                </div>
+                <div className="text-xs sm:text-sm font-semibold text-blue-600">
+                  {Math.round((product.confidence || recommendationData?.confidence || 0) * 100)}%
+                </div>
+              </div>
             )}
           </div>
-        )}
 
-        {/* Complementary Products Info */}
-        {product.boughtTogether && product.boughtTogether > 0 && (
-          <div className="mt-2 text-xs text-green-600 font-medium">
-            🛒 {product.boughtTogether} người mua cùng
-          </div>
-        )}
+          {/* Category/Brand */}
+          {(product.category || product.brand) && (
+            <div className="text-[11px] sm:text-xs text-gray-500 flex items-center truncate">
+              {product.brand && (
+                <span className="truncate max-w-[80px] sm:max-w-[100px]" title={product.brand}>
+                  {product.brand}
+                </span>
+              )}
+              {product.brand && product.category && <span className="mx-1">•</span>}
+              {product.category && (
+                <span className="truncate max-w-[80px] sm:max-w-[100px]" title={product.category}>
+                  {product.category}
+                </span>
+              )}
+            </div>
+          )}
+
+          {product.boughtTogether && product.boughtTogether > 0 && (
+            <div className="mt-1.5 text-[11px] sm:text-xs text-green-600 font-medium">
+              🛒 {product.boughtTogether} người mua cùng
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

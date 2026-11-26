@@ -1,4 +1,4 @@
-// src/pages/ProductDetail.tsx - COMPLETE VERSION WITH FLASH SALE AND SECONDARY IMAGES
+// src/pages/ProductDetail.tsx - COMPLETE & MOBILE RESPONSIVE VERSION
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from '../utils/axios';
@@ -18,8 +18,7 @@ import {
 import { 
   HeartIcon, 
   ShoppingCartIcon, 
-  ShareIcon, 
-  ArrowLeftIcon 
+  ShareIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { useCart } from '../context/CartContext';
@@ -29,7 +28,6 @@ import StockBadge from '../components/StockBadge';
 import OptimizedImage from '../components/OptimizedImage';
 import ReviewSummary from '../components/ReviewSummary';
 
-// Interfaces
 interface SecondaryImage {
   _id?: string;
   url: string;
@@ -105,21 +103,18 @@ const ProductDetail: React.FC = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   
-  // Product state
   const [product, setProduct] = useState<Product | null>(null);
   const [flashSaleInfo, setFlashSaleInfo] = useState<FlashSaleInfo | null>(null);
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [reviews, setReviews] = useState<Review[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   
-  // Selection state
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [currentStock, setCurrentStock] = useState(0);
   
-  // UI state
   const [loading, setLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -131,20 +126,14 @@ const ProductDetail: React.FC = () => {
   const [shareLoading, setShareLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'reviews' | 'care'>('details');
   const [showSecondaryImages, setShowSecondaryImages] = useState(false);
-  
-  // Recommendation state
   const [showRecommendations, setShowRecommendations] = useState(false);
   
-  // Timer ref for cleanup
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // View tracking refs
   const viewStartTime = useRef<number>(Date.now());
   const hasTrackedView = useRef<boolean>(false);
   const trackingTimeout = useRef<NodeJS.Timeout | null>(null);
   const pageLoadTime = useRef<number>(Date.now());
 
-  // Fetch Flash Sale info
   const fetchFlashSaleInfo = async () => {
     if (!id) return;
     
@@ -153,7 +142,6 @@ const ProductDetail: React.FC = () => {
       setFlashSaleInfo(data);
       
       if (data.inFlashSale && data.sale) {
-        // Start countdown
         const endTime = new Date(data.sale.endDate).getTime();
         startCountdown(endTime);
       }
@@ -162,7 +150,6 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // Countdown timer
   const startCountdown = (endTime: number) => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -177,7 +164,7 @@ const ProductDetail: React.FC = () => {
           clearInterval(timerRef.current);
         }
         setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        setFlashSaleInfo(null); // Flash sale ended
+        setFlashSaleInfo(null);
         return;
       }
       
@@ -188,29 +175,24 @@ const ProductDetail: React.FC = () => {
       setTimeLeft({ hours, minutes, seconds });
     };
     
-    updateTimer(); // Initial call
+    updateTimer();
     timerRef.current = setInterval(updateTimer, 1000);
   };
 
-  // Initialize and fetch data
   useEffect(() => {
     if (id) {
-      // Reset states
       viewStartTime.current = Date.now();
       hasTrackedView.current = false;
       pageLoadTime.current = Date.now();
       setShowRecommendations(false);
       
-      // Fetch data
       fetchProductData();
       fetchFlashSaleInfo();
       
-      // Scroll to top
       window.scrollTo(0, 0);
     }
     
     return () => {
-      // Cleanup timers
       if (trackingTimeout.current) {
         clearTimeout(trackingTimeout.current);
       }
@@ -220,7 +202,6 @@ const ProductDetail: React.FC = () => {
     };
   }, [id]);
 
-  // Check wishlist status when user changes
   useEffect(() => {
     if (user && product) {
       checkWishlist();
@@ -229,7 +210,6 @@ const ProductDetail: React.FC = () => {
     }
   }, [user, product]);
 
-  // Show recommendations after product loads
   useEffect(() => {
     if (product && !loading) {
       const timer = setTimeout(() => {
@@ -240,7 +220,6 @@ const ProductDetail: React.FC = () => {
     }
   }, [product, loading]);
 
-  // Update stock when selection changes
   useEffect(() => {
     if (product && selectedSize && selectedColor) {
       const stockItem = product.stock?.find(
@@ -248,7 +227,6 @@ const ProductDetail: React.FC = () => {
       );
       let availableStock = stockItem ? stockItem.quantity : 0;
       
-      // Check flash sale limit
       if (flashSaleInfo?.inFlashSale && flashSaleInfo.sale) {
         availableStock = Math.min(availableStock, flashSaleInfo.sale.available);
       }
@@ -257,7 +235,6 @@ const ProductDetail: React.FC = () => {
     }
   }, [product, selectedSize, selectedColor, flashSaleInfo]);
 
-  // Get effective price (flash sale or regular)
   const getEffectivePrice = () => {
     if (flashSaleInfo?.inFlashSale && flashSaleInfo.sale) {
       return flashSaleInfo.sale.discountPrice;
@@ -265,30 +242,16 @@ const ProductDetail: React.FC = () => {
     return product?.price || 0;
   };
 
-  // Get original price for display
   const getOriginalPrice = () => {
     if (flashSaleInfo?.inFlashSale && flashSaleInfo.sale) {
       return flashSaleInfo.sale.originalPrice;
     }
-    // Show fake discount for non-flash sale items under 1M
     if (product && product.price < 1000000) {
       return product.price * 1.25;
     }
     return null;
   };
 
-  // Get discount percentage
-  const getDiscountPercentage = () => {
-    if (flashSaleInfo?.inFlashSale && flashSaleInfo.sale) {
-      return flashSaleInfo.sale.discountPercentage;
-    }
-    if (product && product.price < 1000000) {
-      return 20; // Default discount
-    }
-    return 0;
-  };
-
-  // Group secondary images by type
   const getGroupedSecondaryImages = () => {
     if (!product?.secondaryImages) return {};
     
@@ -300,7 +263,6 @@ const ProductDetail: React.FC = () => {
       grouped[img.type].push(img);
     });
     
-    // Sort each group by order
     Object.keys(grouped).forEach(type => {
       grouped[type].sort((a, b) => a.order - b.order);
     });
@@ -308,7 +270,6 @@ const ProductDetail: React.FC = () => {
     return grouped;
   };
 
-  // Get secondary image type label
   const getImageTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       detail: 'Chi tiết sản phẩm',
@@ -320,7 +281,6 @@ const ProductDetail: React.FC = () => {
     return labels[type] || type;
   };
 
-  // Get secondary image type icon
   const getImageTypeIcon = (type: string) => {
     switch (type) {
       case 'detail':
@@ -336,7 +296,6 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // Data fetching functions
   const fetchProductData = async () => {
     try {
       setLoading(true);
@@ -410,7 +369,6 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // Action handlers
   const handleAddToCart = async () => {
     if (!user) {
       showToast({
@@ -445,10 +403,8 @@ const ProductDetail: React.FC = () => {
 
     setAddingToCart(true);
     try {
-      // The backend will automatically detect and apply flash sale price
       await addToCart(product._id, quantity, selectedSize, selectedColor);
       
-      // Track add to cart action
       const token = localStorage.getItem('token');
       if (token) {
         try {
@@ -472,10 +428,8 @@ const ProductDetail: React.FC = () => {
         }
       }
       
-      // Update local stock display
       setCurrentStock(prev => Math.max(0, prev - quantity));
       
-      // Update flash sale available quantity if applicable
       if (flashSaleInfo?.inFlashSale && flashSaleInfo.sale) {
         setFlashSaleInfo({
           ...flashSaleInfo,
@@ -486,10 +440,8 @@ const ProductDetail: React.FC = () => {
         });
       }
       
-      // Reset quantity
       setQuantity(1);
       
-      // Show success message
       showToast({
         message: flashSaleInfo?.inFlashSale 
           ? `🔥 Đã thêm ${quantity} sản phẩm Flash Sale vào giỏ!`
@@ -580,7 +532,6 @@ const ProductDetail: React.FC = () => {
     setShowSecondaryImageModal(true);
   };
 
-  // UI helper functions
   const showToast = useCallback((options: ToastOptions) => {
     const { message, type, duration = 3000 } = options;
     
@@ -599,7 +550,7 @@ const ProductDetail: React.FC = () => {
       warning: '⚠'
     }[type];
     
-    toast.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-white font-medium shadow-lg transition-all duration-300 ${bgColor} flex items-center space-x-2 max-w-sm`;
+    toast.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-white text-sm font-medium shadow-lg transition-all duration-300 ${bgColor} flex items-center space-x-2 max-w-sm`;
     toast.innerHTML = `
       <span class="text-lg">${icon}</span>
       <span>${message}</span>
@@ -636,7 +587,6 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // Helper function to get image URL
   const getImageUrl = (imagePath: string | undefined) => {
     if (!imagePath) return '/placeholder-image.png';
     
@@ -646,25 +596,24 @@ const ProductDetail: React.FC = () => {
     return `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
 
-  // Loading state
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-4">
               <div className="bg-gray-200 rounded-lg aspect-square"></div>
               <div className="flex space-x-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="bg-gray-200 rounded w-20 h-20"></div>
+                  <div key={i} className="bg-gray-200 rounded w-16 h-16 sm:w-20 sm:h-20"></div>
                 ))}
               </div>
             </div>
             <div className="space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-              <div className="h-10 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-7 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-9 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-28 bg-gray-200 rounded"></div>
             </div>
           </div>
         </div>
@@ -672,12 +621,11 @@ const ProductDetail: React.FC = () => {
     );
   }
   
-  // Error state
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-16">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Không tìm thấy sản phẩm</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">Không tìm thấy sản phẩm</h2>
           <Link to="/" className="text-blue-600 hover:underline">
             Quay lại trang chủ
           </Link>
@@ -688,15 +636,13 @@ const ProductDetail: React.FC = () => {
 
   const effectivePrice = getEffectivePrice();
   const originalPrice = getOriginalPrice();
-  const discountPercentage = getDiscountPercentage();
   const groupedSecondaryImages = getGroupedSecondaryImages();
 
-  // Main render
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm">
-        <ol className="flex items-center space-x-2 flex-wrap">
+      <nav className="mb-4 sm:mb-6 text-xs sm:text-sm">
+        <ol className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap">
           <li>
             <Link to="/" className="text-gray-500 hover:text-gray-700">Trang chủ</Link>
           </li>
@@ -707,59 +653,56 @@ const ProductDetail: React.FC = () => {
             </Link>
           </li>
           <li className="text-gray-400">/</li>
-          <li className="text-gray-900 font-medium">{product.name}</li>
+          <li className="text-gray-900 font-medium line-clamp-1">{product.name}</li>
         </ol>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12">
         {/* Image Gallery */}
         <div>
-          <div className="relative mb-4 group">
-              <div 
-                className="aspect-square overflow-hidden rounded-lg bg-gray-100 cursor-zoom-in"
-                onClick={() => setShowImageModal(true)}
-              >
-                <OptimizedImage
-                  src={product.images[selectedImage] || '/placeholder.jpg'}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  width={600}
-                  height={600}
-                  loading="eager"
-                  onLoad={() => setImageLoading(false)}
-                />
-                            {imageLoading && (
+          <div className="relative mb-3 sm:mb-4 group">
+            <div 
+              className="aspect-square overflow-hidden rounded-lg bg-gray-100 cursor-zoom-in"
+              onClick={() => setShowImageModal(true)}
+            >
+              <OptimizedImage
+                src={product.images[selectedImage] || '/placeholder.jpg'}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                width={600}
+                height={600}
+                loading="eager"
+                onLoad={() => setImageLoading(false)}
+              />
+              {imageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               )}
               
-              {/* Zoom indicator */}
-              <div className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                <MagnifyingGlassPlusIcon className="w-5 h-5" />
+              <div className="absolute top-2 right-2 bg-black/50 text-white p-1.5 sm:p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <MagnifyingGlassPlusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </div>
             
-            {/* Navigation arrows */}
             {product.images.length > 1 && (
               <>
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 sm:p-2 shadow-lg transition-all"
                 >
-                  <ChevronLeftIcon className="h-5 w-5" />
+                  <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 sm:p-2 shadow-lg transition-all"
                 >
-                  <ChevronRightIcon className="h-5 w-5" />
+                  <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </>
             )}
           </div>
           
-          {/* Thumbnails */}
           {product.images.length > 1 && (
             <div className="flex space-x-2 overflow-x-auto pb-2">
               {product.images.map((image, index) => (
@@ -769,7 +712,7 @@ const ProductDetail: React.FC = () => {
                     setSelectedImage(index);
                     setImageLoading(true);
                   }}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                  className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 ${
                     selectedImage === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
                 >
@@ -786,24 +729,23 @@ const ProductDetail: React.FC = () => {
             </div>
           )}
           
-          {/* Secondary Images Section */}
           {product.secondaryImages && product.secondaryImages.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <button
                 onClick={() => setShowSecondaryImages(!showSecondaryImages)}
-                className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center justify-between w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm sm:text-base"
               >
                 <span className="font-medium text-gray-900">Xem thêm hình ảnh chi tiết</span>
-                <ChevronRightIcon className={`w-5 h-5 transition-transform ${showSecondaryImages ? 'rotate-90' : ''}`} />
+                <ChevronRightIcon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${showSecondaryImages ? 'rotate-90' : ''}`} />
               </button>
               
               {showSecondaryImages && (
-                <div className="mt-4 space-y-6">
+                <div className="mt-4 space-y-4 sm:space-y-6">
                   {Object.entries(groupedSecondaryImages).map(([type, images]) => (
                     <div key={type}>
-                      <div className="flex items-center space-x-2 mb-3">
+                      <div className="flex items-center space-x-2 mb-2.5 sm:mb-3">
                         {getImageTypeIcon(type)}
-                        <h3 className="font-medium text-gray-900">{getImageTypeLabel(type)}</h3>
+                        <h3 className="font-medium text-sm sm:text-base text-gray-900">{getImageTypeLabel(type)}</h3>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         {images.map((image, index) => (
@@ -819,7 +761,7 @@ const ProductDetail: React.FC = () => {
                               loading="lazy"
                             />
                             {image.caption && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] sm:text-xs p-1 text-center truncate">
                                 {image.caption}
                               </div>
                             )}
@@ -836,28 +778,28 @@ const ProductDetail: React.FC = () => {
 
         {/* Product Info */}
         <div className="lg:pl-8">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+          <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-1.5 sm:mb-2">{product.name}</h1>
               {product.brand && (
-                <p className="text-gray-600 mb-2">
+                <p className="text-xs sm:text-base text-gray-600">
                   Thương hiệu: <Link to={`/brand/${product.brand}`} className="font-medium text-blue-600 hover:underline">
                     {product.brand}
                   </Link>
                 </p>
               )}
             </div>
-            <div className="flex items-center space-x-2 ml-4">
-              <button onClick={handleShare} className="p-2 rounded-full hover:bg-gray-100">
-                <ShareIcon className="h-6 w-6 text-gray-600" />
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+              <button onClick={handleShare} disabled={shareLoading} className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
+                <ShareIcon className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
               </button>
-              <button onClick={toggleWishlist} disabled={wishlistLoading} className="p-2 rounded-full hover:bg-gray-100">
+              <button onClick={toggleWishlist} disabled={wishlistLoading} className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
                 {wishlistLoading ? (
-                  <div className="w-6 h-6 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
                 ) : isWishlisted ? (
-                  <HeartSolidIcon className="h-6 w-6 text-red-500" />
+                  <HeartSolidIcon className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
                 ) : (
-                  <HeartIcon className="h-6 w-6 text-gray-600" />
+                  <HeartIcon className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
                 )}
               </button>
             </div>
@@ -865,24 +807,24 @@ const ProductDetail: React.FC = () => {
           
           {/* Flash Sale Timer */}
           {flashSaleInfo?.inFlashSale && (
-            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 mb-6 border border-red-200">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-red-200">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center">
-                  <FireIcon className="w-6 h-6 text-red-500 mr-2 animate-pulse" />
-                  <span className="font-bold text-red-600 text-lg">Flash Sale</span>
+                  <FireIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 mr-1.5 sm:mr-2 animate-pulse" />
+                  <span className="font-bold text-red-600 text-sm sm:text-lg">Flash Sale</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <ClockIcon className="w-5 h-5 text-gray-600" />
-                  <div className="flex space-x-1">
-                    <span className="bg-gray-900 text-white px-2 py-1 rounded font-mono text-sm">
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                  <div className="flex space-x-1 text-xs sm:text-sm">
+                    <span className="bg-gray-900 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-mono">
                       {String(timeLeft.hours).padStart(2, '0')}
                     </span>
                     <span className="font-bold">:</span>
-                    <span className="bg-gray-900 text-white px-2 py-1 rounded font-mono text-sm">
+                    <span className="bg-gray-900 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-mono">
                       {String(timeLeft.minutes).padStart(2, '0')}
                     </span>
                     <span className="font-bold">:</span>
-                    <span className="bg-gray-900 text-white px-2 py-1 rounded font-mono text-sm">
+                    <span className="bg-gray-900 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-mono">
                       {String(timeLeft.seconds).padStart(2, '0')}
                     </span>
                   </div>
@@ -890,12 +832,12 @@ const ProductDetail: React.FC = () => {
               </div>
               
               {flashSaleInfo.sale && (
-                <div className="mt-3">
-                  <div className="flex justify-between text-sm">
+                <div className="mt-2.5 sm:mt-3">
+                  <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-600">Đã bán trong Flash Sale</span>
-                    <span className="font-semibold">Còn {flashSaleInfo.sale.available} sản phẩm</span>
+                    <span className="font-semibold">Còn {flashSaleInfo.sale.available} SP</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 mt-1.5">
                     <div 
                       className="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full"
                       style={{ width: '30%' }}
@@ -907,50 +849,50 @@ const ProductDetail: React.FC = () => {
           )}
           
           {/* Rating */}
-          <div className="flex items-center mb-6">
+          <div className="flex items-center mb-4 sm:mb-6">
             <div className="flex items-center mr-2">
               {[...Array(5)].map((_, i) => (
                 <StarIcon
                   key={i}
-                  className={`h-5 w-5 ${i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
+                  className={`h-4 w-4 sm:h-5 sm:w-5 ${i < Math.floor(product.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}
                 />
               ))}
             </div>
-            <span className="text-gray-700">
+            <span className="text-xs sm:text-base text-gray-700">
               {(product.rating || 0).toFixed(1)} ({product.totalReviews || 0} đánh giá) | {product.totalOrders || 0} đã bán
             </span>
           </div>
 
           {/* Price */}
-          <div className="mb-6">
-            <div className="flex items-baseline space-x-3">
-              <p className="text-3xl font-bold text-red-600">
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
+              <p className="text-2xl sm:text-3xl font-bold text-red-600">
                 {effectivePrice.toLocaleString('vi-VN')}₫
               </p>
               {originalPrice && (
-                <p className="text-lg text-gray-400 line-through">
+                <p className="text-sm sm:text-lg text-gray-400 line-through">
                   {originalPrice.toLocaleString('vi-VN')}₫
                 </p>
               )}
               {flashSaleInfo?.inFlashSale && (
-                <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium">
+                <span className="bg-red-100 text-red-600 px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-medium">
                   Tiết kiệm {((originalPrice || 0) - effectivePrice).toLocaleString('vi-VN')}₫
                 </span>
               )}
             </div>
             {effectivePrice >= 500000 && (
-              <p className="text-sm text-green-600 mt-1">✓ Miễn phí vận chuyển</p>
+              <p className="text-xs sm:text-sm text-green-600 mt-1">✓ Miễn phí vận chuyển</p>
             )}
           </div>
 
           {/* Description */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Mô tả sản phẩm</h3>
-            <p className="text-gray-700 leading-relaxed">{product.description}</p>
+          <div className="mb-4 sm:mb-6">
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900 mb-1.5 sm:mb-2">Mô tả sản phẩm</h3>
+            <p className="text-xs sm:text-base text-gray-700 leading-relaxed">{product.description}</p>
             {product.tags && product.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2.5 sm:mt-3">
                 {product.tags.map((tag, index) => (
-                  <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                  <span key={index} className="text-[11px] sm:text-xs bg-gray-100 text-gray-600 px-2 py-0.5 sm:py-1 rounded-full">
                     #{tag}
                   </span>
                 ))}
@@ -960,18 +902,18 @@ const ProductDetail: React.FC = () => {
 
           {/* Size Selection */}
           {product.sizes && product.sizes.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">Kích thước</label>
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Kích thước</label>
                 {product.secondaryImages?.some(img => img.type === 'size_chart') && (
                   <button 
                     onClick={() => {
                       const sizeChartImg = product.secondaryImages?.find(img => img.type === 'size_chart');
                       if (sizeChartImg) openSecondaryImageModal(sizeChartImg);
                     }}
-                    className="text-sm text-blue-600 hover:underline flex items-center space-x-1"
+                    className="text-xs sm:text-sm text-blue-600 hover:underline flex items-center space-x-1"
                   >
-                    <ChartBarIcon className="w-4 h-4" />
+                    <ChartBarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span>Bảng size</span>
                   </button>
                 )}
@@ -987,7 +929,7 @@ const ProductDetail: React.FC = () => {
                       key={size}
                       onClick={() => setSelectedSize(size)}
                       disabled={!hasStock}
-                      className={`px-3 py-2 border rounded-lg transition-all text-sm font-medium ${
+                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 border rounded-lg transition-all text-xs sm:text-sm font-medium ${
                         selectedSize === size
                           ? 'border-blue-500 bg-blue-50 text-blue-600 ring-2 ring-blue-200'
                           : hasStock
@@ -1005,8 +947,8 @@ const ProductDetail: React.FC = () => {
 
           {/* Color Selection */}
           {product.colors && product.colors.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                 Màu sắc: <span className="font-normal text-gray-600">{selectedColor}</span>
               </label>
               <div className="flex flex-wrap gap-2">
@@ -1020,7 +962,7 @@ const ProductDetail: React.FC = () => {
                       key={color}
                       onClick={() => setSelectedColor(color)}
                       disabled={!hasStock}
-                      className={`px-4 py-2 border rounded-lg transition-all text-sm font-medium ${
+                      className={`px-3 py-1.5 sm:px-4 sm:py-2 border rounded-lg transition-all text-xs sm:text-sm font-medium ${
                         selectedColor === color
                           ? 'border-blue-500 bg-blue-50 text-blue-600 ring-2 ring-blue-200'
                           : hasStock
@@ -1037,35 +979,32 @@ const ProductDetail: React.FC = () => {
           )}
 
           {/* Stock Display */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <StockBadge quantity={currentStock} />
             {flashSaleInfo?.inFlashSale && currentStock > 0 && currentStock <= 10 && (
-              <div className="flex items-center mt-2 text-sm text-orange-600 font-medium">
+              <div className="flex items-center mt-2 text-xs sm:text-sm text-orange-600 font-medium">
                 <FireIcon className="w-4 h-4 mr-1 animate-pulse" />
                 Nhanh tay! Chỉ còn {currentStock} sản phẩm trong Flash Sale
               </div>
             )}
             {!flashSaleInfo?.inFlashSale && currentStock > 0 && currentStock <= 10 && (
-              <div className="flex items-center mt-2 text-sm text-orange-600">
-                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+              <div className="flex items-center mt-2 text-xs sm:text-sm text-orange-600">
                 Chỉ còn {currentStock} sản phẩm!
               </div>
             )}
           </div>
 
           {/* Quantity and Add to Cart */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Số lượng</label>
-              <div className="flex items-center border border-gray-300 rounded-lg">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Số lượng</label>
+              <div className="inline-flex items-center border border-gray-300 rounded-lg">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 sm:px-4 sm:py-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentStock === 0 || quantity <= 1}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                   </svg>
                 </button>
@@ -1080,50 +1019,50 @@ const ProductDetail: React.FC = () => {
                       setQuantity(val);
                     }
                   }}
-                  className="w-20 text-center border-x border-gray-300 focus:outline-none py-3"
+                  className="w-14 sm:w-20 text-center text-sm sm:text-base border-x border-gray-300 focus:outline-none py-2 sm:py-3"
                   disabled={currentStock === 0}
                 />
                 <button
                   onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
-                  className="px-4 py-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 sm:px-4 sm:py-3 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentStock === 0 || quantity >= currentStock}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 flex flex-row gap-2.5 sm:gap-3 sm:items-end">
               <button
                 onClick={handleAddToCart}
                 disabled={currentStock === 0 || addingToCart}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-medium transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 sm:px-6 rounded-lg text-xs sm:text-base font-medium transition-all ${
                   currentStock === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : flashSaleInfo?.inFlashSale
-                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white hover:shadow-lg transform hover:-translate-y-0.5'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white hover:shadow-lg'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
                 }`}
               >
                 {currentStock === 0 ? (
                   'Hết hàng'
                 ) : addingToCart ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Đang thêm...
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Đang thêm...</span>
                   </>
                 ) : (
                   <>
-                    <ShoppingCartIcon className="h-5 w-5" />
-                    {flashSaleInfo?.inFlashSale ? 'Thêm vào giỏ hàng' : 'Thêm vào giỏ hàng'}
+                    <ShoppingCartIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span>Thêm vào giỏ</span>
                   </>
                 )}
               </button>
               
               <button
-                className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-blue-600 text-blue-600 rounded-lg text-xs sm:text-base font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
                 onClick={() => {
                   handleAddToCart();
                   setTimeout(() => navigate('/cart'), 500);
@@ -1136,36 +1075,36 @@ const ProductDetail: React.FC = () => {
           </div>
 
           {/* Shipping & Policies */}
-          <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Chính sách bán hàng</h3>
+          <div className="bg-gray-50 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4">
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900 mb-2">Chính sách bán hàng</h3>
             
-            <div className="flex items-start space-x-3">
-              <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start space-x-2.5 sm:space-x-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <p className="font-medium text-gray-900">Miễn phí vận chuyển</p>
-                <p className="text-sm text-gray-600">Cho đơn hàng từ 500.000₫</p>
+                <p className="font-medium text-xs sm:text-base text-gray-900">Miễn phí vận chuyển</p>
+                <p className="text-xs sm:text-sm text-gray-600">Cho đơn hàng từ 500.000₫</p>
               </div>
             </div>
             
-            <div className="flex items-start space-x-3">
-              <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start space-x-2.5 sm:space-x-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <p className="font-medium text-gray-900">Đổi trả dễ dàng</p>
-                <p className="text-sm text-gray-600">Trong vòng 30 ngày kể từ ngày nhận hàng</p>
+                <p className="font-medium text-xs sm:text-base text-gray-900">Đổi trả dễ dàng</p>
+                <p className="text-xs sm:text-sm text-gray-600">Trong vòng 30 ngày kể từ ngày nhận hàng</p>
               </div>
             </div>
             
-            <div className="flex items-start space-x-3">
-              <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start space-x-2.5 sm:space-x-3">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <p className="font-medium text-gray-900">Cam kết chính hãng</p>
-                <p className="text-sm text-gray-600">100% hàng chính hãng, bồi thường 200% nếu phát hiện hàng giả</p>
+                <p className="font-medium text-xs sm:text-base text-gray-900">Cam kết chính hãng</p>
+                <p className="text-xs sm:text-sm text-gray-600">100% hàng chính hãng, bồi thường 200% nếu phát hiện hàng giả</p>
               </div>
             </div>
           </div>
@@ -1173,12 +1112,12 @@ const ProductDetail: React.FC = () => {
       </div>
 
       {/* Product Details Tabs */}
-      <div className="mb-12">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+      <div className="mb-8 sm:mb-12">
+        <div className="border-b border-gray-200 overflow-x-auto">
+          <nav className="-mb-px flex space-x-5 sm:space-x-8 whitespace-nowrap">
             <button 
               onClick={() => setActiveTab('details')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                 activeTab === 'details'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1188,7 +1127,7 @@ const ProductDetail: React.FC = () => {
             </button>
             <button 
               onClick={() => setActiveTab('reviews')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                 activeTab === 'reviews'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1198,7 +1137,7 @@ const ProductDetail: React.FC = () => {
             </button>
             <button 
               onClick={() => setActiveTab('care')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors ${
                 activeTab === 'care'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1209,39 +1148,39 @@ const ProductDetail: React.FC = () => {
           </nav>
         </div>
         
-        <div className="py-6">
+        <div className="py-4 sm:py-6">
           {activeTab === 'details' && (
             <div className="prose max-w-none">
-              <h3 className="text-lg font-semibold mb-4">Thông tin chi tiết</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Thông tin chi tiết</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-base">
                 <div>
-                  <p className="text-sm text-gray-600">Danh mục</p>
+                  <p className="text-gray-500">Danh mục</p>
                   <p className="font-medium">{product.category}</p>
                 </div>
                 {product.brand && (
                   <div>
-                    <p className="text-sm text-gray-600">Thương hiệu</p>
+                    <p className="text-gray-500">Thương hiệu</p>
                     <p className="font-medium">{product.brand}</p>
                   </div>
                 )}
                 {product.sizes && (
                   <div>
-                    <p className="text-sm text-gray-600">Kích thước có sẵn</p>
+                    <p className="text-gray-500">Kích thước có sẵn</p>
                     <p className="font-medium">{product.sizes.join(', ')}</p>
                   </div>
                 )}
                 {product.colors && (
                   <div>
-                    <p className="text-sm text-gray-600">Màu sắc có sẵn</p>
+                    <p className="text-gray-500">Màu sắc có sẵn</p>
                     <p className="font-medium">{product.colors.join(', ')}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-gray-600">Mã sản phẩm</p>
-                  <p className="font-medium">{product._id}</p>
+                  <p className="text-gray-500">Mã sản phẩm</p>
+                  <p className="font-medium break-all">{product._id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Ngày cập nhật</p>
+                  <p className="text-gray-500">Ngày cập nhật</p>
                   <p className="font-medium">
                     {new Date(product.updatedAt).toLocaleDateString('vi-VN')}
                   </p>
@@ -1251,32 +1190,30 @@ const ProductDetail: React.FC = () => {
           )}
           
           {activeTab === 'reviews' && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {reviews.length > 0 && (
-                <div className="mb-8">
+                <div className="mb-6 sm:mb-8">
                   <ReviewSummary productId={id!} />
                 </div>
               )}
               
               {reviews.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <div className="mb-4">
-                    <StarIcon className="h-12 w-12 text-gray-300 mx-auto" />
-                  </div>
-                  <p className="text-gray-600 mb-2">Chưa có đánh giá nào cho sản phẩm này</p>
-                  <p className="text-sm text-gray-500">Hãy là người đầu tiên đánh giá sản phẩm!</p>
+                <div className="text-center py-8 sm:py-12 bg-gray-50 rounded-lg px-4">
+                  <StarIcon className="h-10 w-10 sm:h-12 sm:w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm sm:text-base text-gray-600 mb-1">Chưa có đánh giá nào cho sản phẩm này</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Hãy là người đầu tiên đánh giá sản phẩm!</p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                       <div className="text-center">
-                        <p className="text-4xl font-bold text-gray-900">{product.rating.toFixed(1)}</p>
+                        <p className="text-3xl sm:text-4xl font-bold text-gray-900">{product.rating.toFixed(1)}</p>
                         <div className="flex items-center justify-center mt-2">
                           {[...Array(5)].map((_, i) => (
                             <StarIcon
                               key={i}
-                              className={`h-5 w-5 ${
+                              className={`h-4 w-4 sm:h-5 sm:w-5 ${
                                 i < Math.floor(product.rating) 
                                   ? 'text-yellow-400' 
                                   : 'text-gray-300'
@@ -1284,7 +1221,7 @@ const ProductDetail: React.FC = () => {
                             />
                           ))}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{product.totalReviews} đánh giá</p>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">{product.totalReviews} đánh giá</p>
                       </div>
                       
                       <div className="col-span-2 space-y-2">
@@ -1294,14 +1231,14 @@ const ProductDetail: React.FC = () => {
                           
                           return (
                             <div key={star} className="flex items-center space-x-2">
-                              <span className="text-sm text-gray-600 w-12">{star} sao</span>
+                              <span className="text-xs sm:text-sm text-gray-600 w-11 sm:w-12">{star} sao</span>
                               <div className="flex-1 bg-gray-200 rounded-full h-2">
                                 <div 
                                   className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
                                   style={{ width: `${percentage}%` }}
                                 ></div>
                               </div>
-                              <span className="text-sm text-gray-600 w-12 text-right">{count}</span>
+                              <span className="text-xs sm:text-sm text-gray-600 w-8 sm:w-12 text-right">{count}</span>
                             </div>
                           );
                         })}
@@ -1309,51 +1246,47 @@ const ProductDetail: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {reviews.map((review) => (
-                      <div key={review._id} className="bg-white border border-gray-200 rounded-lg p-6">
-                        <div className="flex items-start justify-between mb-4">
+                      <div key={review._id} className="bg-white border border-gray-200 rounded-lg p-3.5 sm:p-6">
+                        <div className="flex items-center space-x-2.5 sm:space-x-3 mb-2.5 sm:mb-4">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs sm:text-base text-gray-600 font-medium">
+                              {review.user?.name?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          </div>
                           <div>
-                            <div className="flex items-center space-x-3 mb-2">
-                              <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                                <span className="text-gray-600 font-medium">
-                                  {review.user?.name?.charAt(0).toUpperCase() || 'U'}
-                                </span>
+                            <p className="font-medium text-xs sm:text-base text-gray-900">{review.user?.name || 'Người dùng'}</p>
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <StarIcon
+                                    key={i}
+                                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${
+                                      i < review.rating 
+                                        ? 'text-yellow-400' 
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
                               </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{review.user?.name || 'Người dùng'}</p>
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center">
-                                    {[...Array(5)].map((_, i) => (
-                                      <StarIcon
-                                        key={i}
-                                        className={`h-4 w-4 ${
-                                          i < review.rating 
-                                            ? 'text-yellow-400' 
-                                            : 'text-gray-300'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="text-sm text-gray-500">
-                                    {new Date(review.createdAt).toLocaleDateString('vi-VN')}
-                                  </span>
-                                </div>
-                              </div>
+                              <span className="text-[11px] sm:text-sm text-gray-500">
+                                {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                              </span>
                             </div>
                           </div>
                         </div>
                         
-                        <p className="text-gray-700 mb-4">{review.comment}</p>
+                        <p className="text-xs sm:text-base text-gray-700 mb-3">{review.comment}</p>
                         
                         {review.images && review.images.length > 0 && (
-                          <div className="flex gap-2 mb-4">
+                          <div className="flex gap-2 overflow-x-auto">
                             {review.images.map((image, index) => (
                               <img
                                 key={index}
                                 src={image}
                                 alt={`Review ${index + 1}`}
-                                className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-80"
+                                className="w-16 h-16 sm:w-24 sm:h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 flex-shrink-0"
                               />
                             ))}
                           </div>
@@ -1368,8 +1301,8 @@ const ProductDetail: React.FC = () => {
           
           {activeTab === 'care' && (
             <div className="prose max-w-none">
-              <h3 className="text-lg font-semibold mb-4">Hướng dẫn bảo quản</h3>
-              <ul className="space-y-2 text-gray-700">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Hướng dẫn bảo quản</h3>
+              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-base text-gray-700">
                 <li>• Giặt tay hoặc giặt máy với nước lạnh</li>
                 <li>• Không sử dụng chất tẩy mạnh</li>
                 <li>• Phơi trong bóng râm, tránh ánh nắng trực tiếp</li>
@@ -1379,15 +1312,15 @@ const ProductDetail: React.FC = () => {
               </ul>
               
               {product.secondaryImages?.some(img => img.type === 'instruction') && (
-                <div className="mt-6">
+                <div className="mt-4 sm:mt-6">
                   <button 
                     onClick={() => {
                       const instructionImg = product.secondaryImages?.find(img => img.type === 'instruction');
                       if (instructionImg) openSecondaryImageModal(instructionImg);
                     }}
-                    className="text-blue-600 hover:underline flex items-center space-x-2"
+                    className="text-xs sm:text-base text-blue-600 hover:underline flex items-center space-x-2"
                   >
-                    <DocumentTextIcon className="w-5 h-5" />
+                    <DocumentTextIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>Xem hướng dẫn chi tiết bằng hình ảnh</span>
                   </button>
                 </div>
@@ -1399,16 +1332,16 @@ const ProductDetail: React.FC = () => {
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Sản phẩm liên quan</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="mb-8 sm:mb-12">
+          <h2 className="text-lg sm:text-2xl font-bold mb-4 sm:mb-6">Sản phẩm liên quan</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
             {relatedProducts.map((relatedProduct) => (
               <Link 
                 key={relatedProduct._id}
                 to={`/product/${relatedProduct._id}`}
                 className="group"
               >
-                <div className="aspect-square overflow-hidden rounded-lg bg-gray-100 mb-3">
+                <div className="aspect-square overflow-hidden rounded-lg bg-gray-100 mb-2 sm:mb-3">
                   <OptimizedImage
                     src={relatedProduct.images[0] || '/placeholder.jpg'}
                     alt={relatedProduct.name}
@@ -1418,10 +1351,10 @@ const ProductDetail: React.FC = () => {
                     loading="lazy"
                   />
                 </div>
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                   {relatedProduct.name}
                 </h3>
-                <p className="text-sm font-semibold text-red-600 mt-1">
+                <p className="text-xs sm:text-sm font-semibold text-red-600 mt-1">
                   {relatedProduct.price.toLocaleString('vi-VN')}₫
                 </p>
               </Link>
@@ -1432,9 +1365,9 @@ const ProductDetail: React.FC = () => {
 
       {/* AI Recommendations */}
       {showRecommendations && product && (
-        <div className="space-y-12">
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-bold mb-6">Sản phẩm gợi ý cho bạn</h2>
+        <div className="space-y-8 sm:space-y-12">
+          <div className="bg-gray-50 p-3.5 sm:p-6 rounded-lg">
+            <h2 className="text-lg sm:text-2xl font-bold mb-4 sm:mb-6">Sản phẩm gợi ý cho bạn</h2>
             <RecommendationSection 
               title="Sản phẩm tương tự" 
               type="content"
@@ -1469,19 +1402,18 @@ const ProductDetail: React.FC = () => {
             <img
               src={getImageUrl(product.images[selectedImage])}
               alt={product.name}
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-[85vh] object-contain"
             />
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowImageModal(false);
               }}
-              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
+              className="absolute top-3 right-3 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
             >
-              <XMarkIcon className="w-6 h-6" />
+              <XMarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             
-            {/* Navigation in modal */}
             {product.images.length > 1 && (
               <>
                 <button
@@ -1489,18 +1421,18 @@ const ProductDetail: React.FC = () => {
                     e.stopPropagation();
                     prevImage();
                   }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
                 >
-                  <ChevronLeftIcon className="w-6 h-6" />
+                  <ChevronLeftIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     nextImage();
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
                 >
-                  <ChevronRightIcon className="w-6 h-6" />
+                  <ChevronRightIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </>
             )}
@@ -1518,11 +1450,11 @@ const ProductDetail: React.FC = () => {
             <img
               src={getImageUrl(selectedSecondaryImage.url)}
               alt={selectedSecondaryImage.caption || getImageTypeLabel(selectedSecondaryImage.type)}
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-[85vh] object-contain"
             />
             
             {selectedSecondaryImage.caption && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white p-4">
+              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white p-3 sm:p-4 text-xs sm:text-base">
                 <p className="text-center">{selectedSecondaryImage.caption}</p>
               </div>
             )}
@@ -1532,9 +1464,9 @@ const ProductDetail: React.FC = () => {
                 e.stopPropagation();
                 setShowSecondaryImageModal(false);
               }}
-              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
+              className="absolute top-3 right-3 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-colors"
             >
-              <XMarkIcon className="w-6 h-6" />
+              <XMarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>

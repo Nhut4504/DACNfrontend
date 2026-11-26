@@ -37,7 +37,7 @@ const Navbar: React.FC = () => {
     let socket: any = null;
     fetchUnreadCount();
 
-    socket = io(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`);
+    socket = io(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`);
     
     socket.on('connect', () => {
       console.log('Navbar connected to socket');

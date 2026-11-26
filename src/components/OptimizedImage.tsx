@@ -65,12 +65,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     
     // If it's a local path starting with /uploads, prepend backend URL
     if (originalSrc.startsWith('/uploads')) {
-      return `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${originalSrc}`;
+      return `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${originalSrc}`;
     }
     
     // If it's a relative path without leading slash
     if (!originalSrc.startsWith('/')) {
-      return `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/${originalSrc}`;
+      return `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${originalSrc}`;
     }
     
     // For placeholder or other local assets

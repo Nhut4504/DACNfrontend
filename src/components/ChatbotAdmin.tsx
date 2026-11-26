@@ -70,7 +70,7 @@ const ChatbotAdmin: React.FC<ChatbotAdminProps> = ({ currentUser }) => {
 
   // Initialize Socket.IO
   useEffect(() => {
-    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`);
+    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`);
     
     socketRef.current.on('connect', () => {
       console.log('Admin connected to socket server');
@@ -638,7 +638,7 @@ const ChatbotAdmin: React.FC<ChatbotAdminProps> = ({ currentUser }) => {
                       
                       {message.image && (
                         <img
-                          src={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${message.image}`}
+                          src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${message.image}`}
                           alt="Shared image"
                           className="max-w-full h-auto rounded-xl mb-2 shadow-md"
                         />

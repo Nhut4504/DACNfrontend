@@ -821,7 +821,7 @@ const TopProductItem: React.FC<{
       className="w-12 h-12 rounded-lg object-cover"
       src={item.product.images[0]?.startsWith('http') 
         ? item.product.images[0] 
-        : `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${item.product.images[0]}`
+        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${item.product.images[0]}`
       }
       alt={item.product.name}
       onError={(e) => {

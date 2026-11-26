@@ -117,7 +117,7 @@ const ShipperDashboard: React.FC = () => {
                     'Authorization': `Bearer ${token}`
                 }
             };
-            const { data } = await axios.get<IApiResponse>(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/orders/shipper/orders`, config);
+            const { data } = await axios.get<IApiResponse>(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/v1/orders/shipper/orders`, config);
             if (data.success) {
                 setOrders(data.orders);
             }
@@ -135,7 +135,7 @@ const ShipperDashboard: React.FC = () => {
             const token = localStorage.getItem('token');
             const config = { headers: { 'Authorization': `Bearer ${token}` } };
 
-            await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/v1/orders/shipper/orders/${orderId}`, {
+            await axios.put(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/v1/orders/shipper/orders/${orderId}`, {
                 status: newStatus,
                 ...(info ? { shipperInfo: info } : {})
             }, config);
@@ -264,8 +264,8 @@ const ShipperDashboard: React.FC = () => {
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
-        const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
-        let normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+        const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
+        let normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
         try {
             if (/^https?:\/\//i.test(rawSocketUrl)) {
                 try { normalized = new URL(rawSocketUrl).origin; } catch (e) { normalized = rawSocketUrl; }
@@ -277,7 +277,7 @@ const ShipperDashboard: React.FC = () => {
                 normalized = `${window.location.protocol}//${rawSocketUrl}`;
             }
         } catch (e) {
-            normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+            normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
         }
 
         const socket = io(normalized, { autoConnect: false, path: '/socket.io', transports: ['websocket', 'polling'] });

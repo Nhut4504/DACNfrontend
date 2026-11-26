@@ -8,8 +8,8 @@ interface MapTrackerProps {
   height?: number;
 }
 
-const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
-let SOCKET_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
+let SOCKET_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
 try {
   if (/^https?:\/\//i.test(rawSocketUrl)) {
     try {
@@ -28,7 +28,7 @@ try {
     SOCKET_URL = `${window.location.protocol}//${rawSocketUrl}`;
   }
 } catch (e) {
-  SOCKET_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+  SOCKET_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
 }
 
 // Tính góc phương hướng (0 - 360 độ) từ 2 tọa độ

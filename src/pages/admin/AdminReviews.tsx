@@ -164,7 +164,7 @@ const AdminReviews: React.FC = () => {
                               className="w-10 h-10 rounded object-cover mr-3 flex-shrink-0"
                               src={review.product.images[0]?.startsWith('http') 
                                 ? review.product.images[0] 
-                                : `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${review.product.images[0]}`
+                                : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${review.product.images[0]}`
                               }
                               alt={review.product.name}
                               onError={(e) => {
@@ -248,12 +248,12 @@ const AdminReviews: React.FC = () => {
                                 {review.images.map((image, index) => (
                                   <img
                                     key={index}
-                                    src={image.startsWith('http') ? image : `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${image}`}
+                                    src={image.startsWith('http') ? image : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${image}`}
                                     alt={`Review image ${index + 1}`}
                                     className="w-20 h-20 object-cover rounded border hover:scale-110 transition-transform cursor-pointer"
                                     onClick={() => {
                                       // Optional: Open image in new tab or modal
-                                      window.open(image.startsWith('http') ? image : `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${image}`, '_blank');
+                                      window.open(image.startsWith('http') ? image : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${image}`, '_blank');
                                     }}
                                   />
                                 ))}

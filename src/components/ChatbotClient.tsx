@@ -58,7 +58,7 @@ const ChatbotClient: React.FC<ChatbotClientProps> = ({ currentUser }) => {
 
   // Initialize Socket.IO
   useEffect(() => {
-    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`);
+    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`);
     
     socketRef.current.on('connect', () => {
       console.log('Client connected to socket server');
@@ -483,7 +483,7 @@ const ChatbotClient: React.FC<ChatbotClientProps> = ({ currentUser }) => {
                         
                         {message.image && (
                           <img
-                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${message.image}`}
+                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${message.image}`}
                             alt="Shared image"
                             className="max-w-full h-auto rounded-xl mb-2 shadow-md"
                           />

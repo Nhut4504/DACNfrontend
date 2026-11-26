@@ -42,7 +42,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ toggleSidebar }) => {
 
   // Initialize socket connection
   useEffect(() => {
-    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`);
+    socketRef.current = io(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`);
     
     if (user && user.email === 'admin@gmail.com') {
       socketRef.current.emit('joinAdminRoom');

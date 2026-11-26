@@ -32,7 +32,7 @@ const AIChatBubble: React.FC = () => {
     try {
       // 2. Gọi API xuống Node.js Backend
       // Lưu ý: Đảm bảo port backend của bạn là 5000, nếu khác thì sửa lại nhé
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/chatbot`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/chatbot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText })

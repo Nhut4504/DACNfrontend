@@ -39,8 +39,8 @@ const OrderHistory: React.FC = () => {
       fetchOrders();
     }
     // Setup socket for real-time order updates (normalize URL and strip any /api path)
-    const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
-    let normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+    const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
+    let normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
     try {
       if (/^https?:\/\//i.test(rawSocketUrl)) {
         try { normalized = new URL(rawSocketUrl).origin; } catch (e) { normalized = rawSocketUrl; }
@@ -52,7 +52,7 @@ const OrderHistory: React.FC = () => {
         normalized = `${window.location.protocol}//${rawSocketUrl}`;
       }
     } catch (e) {
-      normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+      normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}`;
     }
 
     // eslint-disable-next-line no-console

@@ -1,8 +1,9 @@
 // src/utils/axios.ts
 import axios from 'axios';
+import { API_URL } from '../config';
 
 const instance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
   timeout: 10000,
 });
 
@@ -25,11 +26,9 @@ instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth data
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
-      // Redirect based on current path
+
       if (window.location.pathname.startsWith('/admin')) {
         window.location.href = '/admin/login';
       } else {

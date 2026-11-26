@@ -1,4 +1,4 @@
-// src/components/admin/AdminSidebar.tsx - Updated with Voucher menu
+// src/components/admin/AdminSidebar.tsx - Updated with Voucher & IoT RFID menu
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -11,7 +11,8 @@ import {
   ChartBarIcon,
   Gift,
   LogOut,
-  Flame
+  Flame,
+  Radio
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -32,6 +33,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
     { path: '/admin/recommendations', icon: ChartBarIcon, label: 'Quản lý đề xuất' },
     { path: '/admin/chat', icon: MessageSquare, label: 'Chat' },
     { path: '/admin/flash-sales', icon: Flame, label: 'Flash Sale' },
+    { path: '/admin/iot', icon: Radio, label: 'Trạm Kho RFID (IoT)' },
   ];
 
   return (
@@ -56,7 +58,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen }) => {
             {isOpen && <span className="ml-3">{item.label}</span>}
           </NavLink>
         ))}
-        
+
         <button
           onClick={logout}
           className="flex items-center w-full px-6 py-3 mt-8 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"

@@ -1,6 +1,7 @@
-// src/components/SearchBar.tsx - FIXED VERSION WITH USER-SPECIFIC HISTORY
+// src/components/SearchBar.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import ImageSearch from './ImageSearch'; // Component này giờ đã là Modal
 import { useNavigate } from 'react-router-dom';
 import axios from '../utils/axios';
 import { useDebounce } from '../hooks/useDebounce';
@@ -30,6 +31,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [clickedResults, setClickedResults] = useState<string[]>([]);
   
+  // State để bật tắt Modal tìm kiếm hình ảnh
+  const [showImageModal, setShowImageModal] = useState(false);
+  
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -45,7 +49,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     return 'recentSearches_guest';
   };
 
-  // Load recent searches from localStorage - USER SPECIFIC
+  // Load recent searches from localStorage
   useEffect(() => {
     const loadRecentSearches = () => {
       const storageKey = getStorageKey();
@@ -54,7 +58,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Ensure it's an array
           if (Array.isArray(parsed)) {
             setRecentSearches(parsed);
           } else {
@@ -72,7 +75,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     };
 
     loadRecentSearches();
-  }, [user]); // Reload when user changes
+  }, [user]);
 
   // Fetch suggestions when query changes
   useEffect(() => {
@@ -106,7 +109,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         }
       });
       
-      // Handle response format
       let products = [];
       if (response.data) {
         if (Array.isArray(response.data)) {
@@ -118,7 +120,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         }
       }
       
-      // Validate and filter products
       const validProducts = products
         .filter((p: any) => p && p._id && p.name && typeof p.price === 'number')
         .slice(0, 8);
@@ -132,7 +133,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     }
   };
 
-  // Save search to user-specific storage
   const saveRecentSearch = (searchQuery: string) => {
     if (!searchQuery.trim()) return;
     
@@ -140,7 +140,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
       const trimmedQuery = searchQuery.trim();
       const storageKey = getStorageKey();
       
-      // Get current searches for this user
       const filtered = Array.isArray(recentSearches) 
         ? recentSearches.filter(s => s !== trimmedQuery)
         : [];
@@ -149,7 +148,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
       setRecentSearches(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       
-      // Clean up old guest searches when user logs in
       if (user && user._id) {
         const guestKey = 'recentSearches_guest';
         if (localStorage.getItem(guestKey)) {
@@ -163,45 +161,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
 
   const trackSearch = async (searchQuery: string, resultsCount: number, clickedProductIds: string[] = []) => {
     if (!user) return;
-    
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      
       const trimmedQuery = searchQuery.trim();
       
-      // Track search in user's search history
-      try {
-        await axios.post('/users/search-history', {
+      await axios.post('/users/search-history', {
+        query: trimmedQuery,
+        resultsCount: resultsCount,
+        clickedResults: clickedProductIds
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      await axios.post('/recommendations/track', {
+        action: 'search',
+        metadata: {
           query: trimmedQuery,
           resultsCount: resultsCount,
-          clickedResults: clickedProductIds
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('✅ Search tracked in user history');
-      } catch (error) {
-        console.warn('Failed to track search in user history:', error);
-      }
-      
-      // Also track in recommendations
-      try {
-        await axios.post('/recommendations/track', {
-          action: 'search',
-          metadata: {
-            query: trimmedQuery,
-            resultsCount: resultsCount,
-            clickedResults: clickedProductIds,
-            source: 'search_bar'
-          }
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('✅ Search tracked in recommendations');
-      } catch (error) {
-        console.warn('Failed to track search in recommendations:', error);
-      }
-      
+          clickedResults: clickedProductIds,
+          source: 'search_bar'
+        }
+      }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (error) {
       console.warn('Failed to track search:', error);
     }
@@ -213,10 +192,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     
     if (trimmedQuery) {
       saveRecentSearch(trimmedQuery);
-      
-      // Track search with clicked results
       await trackSearch(trimmedQuery, suggestions.length, clickedResults);
-      
       onSearch(trimmedQuery);
       setShowSuggestions(false);
       setClickedResults([]);
@@ -225,17 +201,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   };
 
   const handleSuggestionClick = async (product: SearchSuggestion) => {
-    // Track clicked result
     const updatedClicked = [...clickedResults, product._id];
     setClickedResults(updatedClicked);
-    
-    // Save the product name as a search
     saveRecentSearch(product.name);
-    
-    // Track search with this specific click
     await trackSearch(query, suggestions.length, updatedClicked);
     
-    // Track product click from search
     if (user) {
       try {
         const token = localStorage.getItem('token');
@@ -248,9 +218,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
               query: query,
               position: suggestions.findIndex(p => p._id === product._id) + 1
             }
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          }, { headers: { Authorization: `Bearer ${token}` } });
         }
       } catch (error) {
         console.warn('Failed to track product click:', error);
@@ -266,8 +234,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     setQuery(search);
     onSearch(search);
     setShowSuggestions(false);
-    
-    // Move to top of recent searches
     saveRecentSearch(search);
   };
 
@@ -283,9 +249,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
+        setSelectedIndex(prev => prev < suggestions.length - 1 ? prev + 1 : prev);
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -317,13 +281,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     return product.stock?.some(item => item.quantity > 0) ?? true;
   };
 
-  // Get popular searches based on user
   const getPopularSearches = () => {
     if (user) {
-      // Could fetch user-specific popular searches from backend
       return ['Áo thun', 'Quần jean', 'Váy đầm', 'Giày sneaker', 'Áo khoác', 'Túi xách', 'Phụ kiện'];
     }
-    // Generic popular searches for guests
     return ['Sản phẩm mới', 'Khuyến mãi', 'Áo thun', 'Quần jean', 'Giày dép', 'Phụ kiện'];
   };
 
@@ -342,7 +303,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           placeholder="Tìm kiếm sản phẩm, danh mục, thương hiệu..."
-          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+          className="w-full pl-10 pr-20 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
         />
         <MagnifyingGlassIcon className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
         
@@ -355,18 +316,28 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
               setClickedResults([]);
               inputRef.current?.focus();
             }}
-            className="absolute right-10 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-20 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         )}
         
+        {/* Nút mở Modal tìm kiếm hình ảnh */}
+        <button
+          type="button"
+          onClick={() => setShowImageModal(true)}
+          title="Tìm bằng ảnh"
+          className="absolute right-10 top-2 p-1.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <PhotoIcon className="h-6 w-6" />
+        </button>
+
         <button
           type="submit"
-          className="absolute right-2 top-2 bg-blue-600 text-white p-1.5 rounded hover:bg-blue-700 transition-colors"
+          className="absolute right-2 top-2 bg-blue-600 text-white p-1.5 rounded-md hover:bg-blue-700 transition-colors"
           aria-label="Tìm kiếm"
         >
-          <MagnifyingGlassIcon className="h-4 w-4" />
+          <MagnifyingGlassIcon className="h-5 w-5" />
         </button>
       </form>
 
@@ -441,7 +412,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
             </div>
           )}
 
-          {/* Recent Searches - User specific */}
+          {/* Recent Searches */}
           {!loading && !query && Array.isArray(recentSearches) && recentSearches.length > 0 && (
             <div>
               <div className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
@@ -484,7 +455,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
             </div>
           )}
 
-          {/* Popular Searches - User specific */}
+          {/* Popular Searches */}
           {!loading && !query && (!recentSearches || recentSearches.length === 0) && (
             <div>
               <div className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border-b border-gray-200">
@@ -505,7 +476,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
             </div>
           )}
 
-          {/* Search tips */}
+          {/* Tips */}
           {!loading && !query && (
             <div className="px-4 py-3 bg-blue-50 text-xs text-blue-700">
               💡 Mẹo: Tìm kiếm theo tên sản phẩm, danh mục hoặc thương hiệu
@@ -513,6 +484,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
           )}
         </div>
       )}
+
+      {/* --- PHẦN THAY ĐỔI: Gọi ImageSearch dưới dạng Modal --- */}
+      {/* Chúng ta chỉ cần truyền props isOpen và onClose, ImageSearch sẽ tự lo phần hiển thị popup */}
+      <ImageSearch 
+        isOpen={showImageModal} 
+        onClose={() => setShowImageModal(false)} 
+      />
+      
     </div>
   );
 };

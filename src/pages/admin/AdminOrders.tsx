@@ -1,3 +1,4 @@
+import { BACKEND_URL } from '../../config';
 // src/pages/admin/AdminOrders.tsx - Complete Version with Payment Confirmation
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -148,7 +149,7 @@ const AdminOrders: React.FC = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    socketRef.current = io('http://localhost:5000');
+    socketRef.current = io(BACKEND_URL);
 
     if (user && (user.email === 'admin@gmail.com' || user.role === 'admin')) {
       socketRef.current.emit('joinAdminRoom');
@@ -534,7 +535,7 @@ const AdminOrders: React.FC = () => {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    return `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+    return `${BACKEND_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
 
   return (

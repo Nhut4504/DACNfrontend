@@ -643,7 +643,7 @@ const ProductDetail: React.FC = () => {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    return `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+    return `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
 
   // Loading state

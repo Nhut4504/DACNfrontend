@@ -10,6 +10,7 @@ import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import ShipperDashboard from './components/ShipperDashboard';
+import AIChatBubble from './components/AIChatBubble';
 // Client Pages
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
@@ -22,7 +23,6 @@ import Wishlist from './pages/Wishlist';
 import ViewHistory from './pages/ViewHistory';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
-
 
 // Admin Components
 import AdminLayout from './components/admin/AdminLayout';
@@ -37,6 +37,7 @@ import AdminReviews from './pages/admin/AdminReviews';
 import AdminRecommendations from './pages/admin/AdminRecommendations';
 import AdminVouchers from './pages/admin/AdminVouchers';
 import AdminFlashSales from './pages/admin/AdminFlashSales';
+import AdminIotStation from './pages/admin/AdminIotStation';
 
 const queryClient = new QueryClient();
 
@@ -97,28 +98,24 @@ function App() {
           <Router>
             <Routes>
               {/* PUBLIC ROUTES - No authentication required */}
-              
-              {/* Home page - accessible to everyone */}
               <Route path="/" element={
                 <PageWithNavbar>
                   <Home />
                 </PageWithNavbar>
               } />
-              
-              {/* Product detail - accessible to everyone */}
+
               <Route path="/product/:id" element={
                 <PageWithNavbar>
                   <ProductDetail />
                 </PageWithNavbar>
               } />
-              
-              {/* Auth pages */}
+
               <Route path="/login" element={
                 <AuthPage>
                   <Login />
                 </AuthPage>
               } />
-              
+
               <Route path="/register" element={
                 <AuthPage>
                   <Register />
@@ -126,57 +123,58 @@ function App() {
               } />
 
               {/* PROTECTED ROUTES - Require authentication */}
-              
               <Route path="/cart" element={
                 <ProtectedPageWithNavbar>
                   <Cart />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/checkout" element={
                 <ProtectedPageWithNavbar>
                   <Checkout />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/orders" element={
                 <ProtectedPageWithNavbar>
                   <OrderHistory />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/wishlist" element={
                 <ProtectedPageWithNavbar>
                   <Wishlist />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/view-history" element={
                 <ProtectedPageWithNavbar>
                   <ViewHistory />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/chat" element={
                 <ProtectedPageWithNavbar>
                   <Chat />
                 </ProtectedPageWithNavbar>
               } />
-              
+
               <Route path="/profile" element={
                 <ProtectedPageWithNavbar>
                   <Profile />
                 </ProtectedPageWithNavbar>
               } />
+
               {/* --- shipper --- */}
               <Route path="/shipper" element={
                 <ProtectedPageWithNavbar>
                   <ShipperDashboard />
                 </ProtectedPageWithNavbar>
               } />
+
               {/* ADMIN ROUTES */}
               <Route path="/admin/login" element={<AdminLogin />} />
-              
+
               <Route path="/admin" element={<AdminRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -186,14 +184,17 @@ function App() {
                   <Route path="customers" element={<AdminCustomers />} />
                   <Route path="reviews" element={<AdminReviews />} />
                   <Route path="chat" element={<Chat />} />
-                  <Route path="vouchers" element={<AdminVouchers />} /> 
+                  <Route path="vouchers" element={<AdminVouchers />} />
                   <Route path="recommendations" element={<AdminRecommendations />} />
                   <Route path="flash-sales" element={<AdminFlashSales />} />
+                  <Route path="iot" element={<AdminIotStation />} />
                 </Route>
               </Route>
+
               {/* Fallback for unknown routes */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <AIChatBubble />
           </Router>
         </CartProvider>
       </AuthProvider>

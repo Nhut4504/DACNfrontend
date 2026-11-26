@@ -39,8 +39,8 @@ const OrderHistory: React.FC = () => {
       fetchOrders();
     }
     // Setup socket for real-time order updates (normalize URL and strip any /api path)
-    const rawSocketUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    let normalized = 'http://localhost:5000';
+    const rawSocketUrl = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
+    let normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
     try {
       if (/^https?:\/\//i.test(rawSocketUrl)) {
         try { normalized = new URL(rawSocketUrl).origin; } catch (e) { normalized = rawSocketUrl; }
@@ -52,7 +52,7 @@ const OrderHistory: React.FC = () => {
         normalized = `${window.location.protocol}//${rawSocketUrl}`;
       }
     } catch (e) {
-      normalized = 'http://localhost:5000';
+      normalized = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}`;
     }
 
     // eslint-disable-next-line no-console
@@ -62,19 +62,18 @@ const OrderHistory: React.FC = () => {
 
     socket.on('orderStatusUpdated', (payload: any) => {
       if (!payload || !payload.orderId) return;
-      // Update local orders
-      setOrders((prev) => prev.map(o => o._id === payload.orderId ? { ...o, orderStatus: payload.status || payload.orderStatus || o.orderStatus } : o));
+      // Update local orders kèm thông tin shipperInfo mới nhất
+      setOrders((prev) => prev.map(o => o._id === payload.orderId ? { 
+        ...o, 
+        orderStatus: payload.status || payload.orderStatus || o.orderStatus,
+        shipperInfo: payload.shipperInfo || o.shipperInfo
+      } : o));
 
-      // If the order was moved to 'shipped', ensure this socket joins the order room
       try {
         if (payload.status === 'shipped' || payload.orderStatus === 'shipped') {
-          // eslint-disable-next-line no-console
-          console.log('[OrderHistory] joining order room for', payload.orderId);
           socketRef.current?.emit('joinOrder', payload.orderId);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     });
 
     return () => {
@@ -517,6 +516,28 @@ const OrderHistory: React.FC = () => {
                   <p className="text-sm">
                     {order.shippingAddress.street}, {order.shippingAddress.state}, {order.shippingAddress.city}
                   </p>
+                </div>
+              )}
+
+              {/* THÊM MỚI: Thông tin Shipper giao hàng */}
+              {order.shipperInfo && (order.shipperInfo.name || order.shipperInfo.phone) && (
+                <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-purple-800 uppercase tracking-wider mb-0.5">
+                      🛵 Thông tin người giao hàng (Shipper)
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {order.shipperInfo.name}
+                    </p>
+                  </div>
+                  {order.shipperInfo.phone && (
+                    <a
+                      href={`tel:${order.shipperInfo.phone}`}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors"
+                    >
+                      📞 {order.shipperInfo.phone}
+                    </a>
+                  )}
                 </div>
               )}
 

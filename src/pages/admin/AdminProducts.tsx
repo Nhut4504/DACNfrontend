@@ -1,5 +1,6 @@
-// src/pages/admin/AdminProducts.tsx - Complete Version with Import/Export CSV
-import React, { useState, useEffect } from 'react';
+// src/pages/admin/AdminProducts.tsx - Enhanced with Import/Export EXCEL & IoT Simulator
+import React, { useState, useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode'; // Thêm thư viện quét QR này vào
 import {
   Plus,
   Search,
@@ -14,7 +15,8 @@ import {
   AlertCircle,
   Download,
   FileSpreadsheet,
-  ChevronDown
+  ChevronDown,
+  ScanLine // Đã thêm icon ScanLine cho chức năng IoT
 } from 'lucide-react';
 import axios from '../../utils/axios';
 
@@ -62,11 +64,59 @@ const AdminProducts: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   
-  // Import/Export states
+  // Import/Export states (UPDATED FOR EXCEL)
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+
+  // States for IoT feature
+  const [showIotModal, setShowIotModal] = useState(false);
+  const [isScanningCamera, setIsScanningCamera] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+
+  useEffect(() => {
+    if (isScanningCamera) {
+      scannerRef.current = new Html5Qrcode("qr-reader");
+      scannerRef.current.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          playBeepSound();
+          setIotData(prev => ({ ...prev, productId: decodedText })); // Tự điền mã vào ô input
+          setIsScanningCamera(false); // Tự đóng camera sau khi quét xong
+        },
+        (errorMessage) => {}
+      ).catch(err => {
+        console.error("Lỗi mở camera", err);
+        alert("Vui lòng cấp quyền truy cập Camera cho trình duyệt!");
+        setIsScanningCamera(false);
+      });
+    }
+
+    return () => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(console.error);
+      }
+    };
+  }, [isScanningCamera]);
+
+  const playBeepSound = () => {
+    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    oscillator.frequency.setValueAtTime(880, context.currentTime);
+    oscillator.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.1);
+  };
+  const [iotData, setIotData] = useState({
+    productId: '',
+    action: 'import',
+    size: '',
+    color: '',
+    quantity: 1
+  });
+  const [scanning, setScanning] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -139,37 +189,50 @@ const AdminProducts: React.FC = () => {
     }
   };
 
-  // Export CSV function
-  const handleExportCSV = async () => {
+  // ==========================================
+  // EXCEL EXPORT FUNCTION (PHIÊN BẢN CHỐNG LỖI)
+  // ==========================================
+  const handleExportExcel = async () => {
     try {
       setExporting(true);
-      const response = await axios.get('/admin/products/export/csv', {
-        responseType: 'blob'
+      
+      const response = await axios.get('/admin/products/export/excel', {
+        responseType: 'blob',
+        timeout: 0 // Đổi thành 0 (Tắt Timeout, cho phép chờ đến khi xuất xong)
       });
       
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blobData = response instanceof Blob ? response : 
+                       (response.data instanceof Blob ? response.data : 
+                        new Blob([response.data || response]));
+      
+      const url = window.URL.createObjectURL(blobData);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `products-${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `DanhSachSanPham-${new Date().toISOString().split('T')[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      alert('Xuất file CSV thành công!');
+      alert('Xuất file Excel thành công!');
     } catch (error: any) {
-      console.error('Error exporting CSV:', error);
-      alert(error.response?.data?.message || 'Lỗi khi xuất file CSV');
+      console.error('LỖI CHI TIẾT TẠI FRONTEND:', error);
+      if (error.code === 'ECONNABORTED') {
+        alert('Quá thời gian chờ do quá nhiều ảnh. Vui lòng thử lại!');
+      } else {
+        alert('Lỗi tải file: ' + (error.message || 'Không xác định. Mở F12 để xem chi tiết.'));
+      }
     } finally {
       setExporting(false);
     }
   };
 
-  // Import CSV function
-  const handleImportCSV = async () => {
+  // ==========================================
+  // EXCEL IMPORT FUNCTION
+  // ==========================================
+  const handleImportExcel = async () => {
     if (!importFile) {
-      alert('Vui lòng chọn file CSV');
+      alert('Vui lòng chọn file Excel (.xlsx)');
       return;
     }
     
@@ -178,11 +241,11 @@ const AdminProducts: React.FC = () => {
     
     try {
       setImporting(true);
-      const response = await axios.post('/admin/products/import/csv', formData, {
+      const response = await axios.post('/admin/products/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert(`Import thành công: ${response.data.imported} sản phẩm`);
+      alert(`Import thành công: ${response.data.imported || response.data.updated + response.data.created} sản phẩm`);
       
       if (response.data.errors > 0) {
         console.error('Import errors:', response.data.errorDetails);
@@ -194,10 +257,30 @@ const AdminProducts: React.FC = () => {
       fetchProducts();
       fetchCategories();
     } catch (error: any) {
-      console.error('Error importing CSV:', error);
-      alert(error.response?.data?.message || 'Lỗi khi import CSV');
+      console.error('Error importing Excel:', error);
+      alert(error.response?.data?.message || 'Lỗi khi import Excel');
     } finally {
       setImporting(false);
+    }
+  };
+
+  // ==========================================
+  // XỬ LÝ IOT WEBHOOK
+  // ==========================================
+  const handleIotScan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setScanning(true);
+      const response = await axios.post('/admin/products/iot/scan', iotData);
+      alert(response.data.message);
+      
+      setShowIotModal(false);
+      setIotData({ ...iotData, productId: '' }); // Reset lại ID sau khi quét thành công
+      fetchProducts(); // Tải lại bảng để cập nhật số lượng tồn kho mới nhất
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Lỗi kết nối với thiết bị IoT');
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -214,7 +297,6 @@ const AdminProducts: React.FC = () => {
     submitFormData.append('sizes', JSON.stringify(formData.sizes));
     submitFormData.append('colors', JSON.stringify(formData.colors));
     
-    // Generate stock based on sizes and colors if not provided
     let stockData = formData.stock;
     if (stockData.length === 0 && formData.sizes.length > 0 && formData.colors.length > 0) {
       stockData = [];
@@ -227,12 +309,10 @@ const AdminProducts: React.FC = () => {
     submitFormData.append('stock', JSON.stringify(stockData));
     submitFormData.append('tags', JSON.stringify(formData.tags));
     
-    // Add existing images if editing
     if (editingProduct && existingImages.length > 0) {
       submitFormData.append('existingImages', JSON.stringify(existingImages));
     }
     
-    // Add new images
     selectedImages.forEach(image => {
       submitFormData.append('images', image);
     });
@@ -379,14 +459,13 @@ const AdminProducts: React.FC = () => {
     setExistingImages(existingImages.filter((_, i) => i !== index));
   };
 
-  // Helper function to get image URL
   const getImageUrl = (imagePath: string | undefined) => {
     if (!imagePath) return '/placeholder-image.png';
     
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    return `http://localhost:5000${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+    return `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
 
   const formatCurrency = (amount: number) => {
@@ -396,7 +475,6 @@ const AdminProducts: React.FC = () => {
     }).format(amount);
   };
 
-  // Stock management functions
   const openStockModal = (product: Product) => {
     setStockProduct(product);
     setStockUpdates(product.stock || []);
@@ -426,13 +504,11 @@ const AdminProducts: React.FC = () => {
     }
   };
 
-  // Calculate total stock
   const getTotalStock = (product: Product) => {
     if (!product.stock || !Array.isArray(product.stock)) return 0;
     return product.stock.reduce((sum, item) => sum + (item.quantity || 0), 0);
   };
 
-  // Get stock status badge
   const getStockBadge = (product: Product) => {
     const total = getTotalStock(product);
     if (total === 0) {
@@ -444,13 +520,11 @@ const AdminProducts: React.FC = () => {
     }
   };
 
-  // Get subcategories for selected category
   const getSubcategories = (selectedCategory: string) => {
     const cat = categories.find(c => c.category === selectedCategory);
     return cat?.subcategories || [];
   };
 
-  // Handle new category addition
   const handleAddNewCategory = () => {
     if (newCategory) {
       setFormData({ ...formData, category: newCategory, subcategory: newSubcategory });
@@ -460,7 +534,6 @@ const AdminProducts: React.FC = () => {
     }
   };
 
-  // Handle new brand addition
   const handleAddNewBrand = () => {
     if (newBrand) {
       setFormData({ ...formData, brand: newBrand });
@@ -474,23 +547,35 @@ const AdminProducts: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-800">Quản lý sản phẩm</h1>
         <div className="flex space-x-2">
+          {/* NÚT MÔ PHỎNG IOT */}
+          <button
+            onClick={() => setShowIotModal(true)}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center shadow"
+            title="Mô phỏng máy quét RFID/Barcode"
+          >
+            <ScanLine className="w-5 h-5 mr-2" />
+            Giả lập IoT
+          </button>
+          
           <button
             onClick={() => setShowImportModal(true)}
             className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 flex items-center"
-            title="Import CSV"
+            title="Nhập dữ liệu Excel"
           >
             <FileSpreadsheet className="w-5 h-5 mr-2" />
-            Import
+            Nhập Excel
           </button>
+          
           <button
-            onClick={handleExportCSV}
+            onClick={handleExportExcel}
             disabled={exporting}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center disabled:opacity-50"
-            title="Export CSV"
+            title="Xuất dữ liệu ra Excel kèm ảnh"
           >
             <Download className="w-5 h-5 mr-2" />
-            {exporting ? 'Đang xuất...' : 'Export'}
+            {exporting ? 'Đang xuất...' : 'Xuất Excel'}
           </button>
+          
           <button
             onClick={() => setShowModal(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
@@ -501,7 +586,6 @@ const AdminProducts: React.FC = () => {
         </div>
       </div>
 
-      {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
@@ -531,7 +615,6 @@ const AdminProducts: React.FC = () => {
         </div>
       </div>
 
-      {/* Products Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full">
           <thead className="bg-gray-50">
@@ -656,7 +739,6 @@ const AdminProducts: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center space-x-2">
           <button
@@ -687,32 +769,35 @@ const AdminProducts: React.FC = () => {
         </div>
       )}
 
-      {/* Import CSV Modal */}
+      {/* IMPORT EXCEL MODAL */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Import CSV</h2>
+              <h2 className="text-xl font-bold mb-4">Nhập Dữ Liệu Sản Phẩm Bằng Excel</h2>
               
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">
-                  Format CSV: name, description, price, category, subcategory, brand, sizes, colors, tags
+                  Hệ thống yêu cầu file định dạng <strong>.xlsx</strong> hoặc <strong>.xls</strong>. 
                 </p>
-                <p className="text-xs text-gray-500">
-                  Sizes và colors ngăn cách bằng dấu phẩy. VD: "S,M,L"
+                <p className="text-xs text-gray-500 mb-2">
+                  File Excel cần chứa các cột cơ bản: Tên, Mô tả, Giá, Danh mục, Thương hiệu.
+                </p>
+                <p className="text-xs text-red-500 font-semibold italic">
+                  Lưu ý: Dữ liệu hình ảnh sẽ không được nhập hàng loạt, admin vui lòng cập nhật hình ảnh qua giao diện quản lý sau khi import dữ liệu văn bản thành công.
                 </p>
               </div>
               
               <input
                 type="file"
-                accept=".csv"
+                accept=".xlsx, .xls"
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                className="w-full mb-4 p-2 border rounded"
+                className="w-full mb-4 p-2 border rounded cursor-pointer"
               />
               
               {importFile && (
                 <p className="text-sm text-gray-600 mb-4">
-                  File đã chọn: {importFile.name}
+                  File đã chọn: <span className="font-semibold text-blue-600">{importFile.name}</span>
                 </p>
               )}
               
@@ -727,11 +812,11 @@ const AdminProducts: React.FC = () => {
                   Hủy
                 </button>
                 <button
-                  onClick={handleImportCSV}
+                  onClick={handleImportExcel}
                   disabled={importing || !importFile}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {importing ? 'Đang import...' : 'Import'}
+                  {importing ? 'Đang nhập dữ liệu...' : 'Bắt đầu Nhập'}
                 </button>
               </div>
             </div>
@@ -739,11 +824,11 @@ const AdminProducts: React.FC = () => {
         </div>
       )}
 
-      {/* Product Modal */}
+      {/* PRODUCT FORM MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center z-10">
               <h2 className="text-2xl font-bold">
                 {editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
               </h2>
@@ -1166,7 +1251,7 @@ const AdminProducts: React.FC = () => {
       {showStockModal && stockProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center z-10">
               <h2 className="text-xl font-bold">
                 Quản lý tồn kho - {stockProduct.name}
               </h2>
@@ -1228,8 +1313,133 @@ const AdminProducts: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* IOT SIMULATOR MODAL */}
+      {showIotModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="bg-purple-600 p-4 flex justify-between items-center text-white">
+              <h2 className="text-xl font-bold flex items-center">
+                <ScanLine className="w-6 h-6 mr-2 animate-pulse" />
+                Mô phỏng Máy quét Kho (IoT)
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowIotModal(false);
+                  setIsScanningCamera(false); // Đóng modal thì tắt luôn camera
+                }} 
+                className="hover:text-purple-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleIotScan} className="p-6 space-y-4">
+              <div className="bg-purple-50 p-3 rounded text-sm text-purple-800">
+                Giả lập tín hiệu gửi từ máy quét RFID hoặc Barcode cầm tay khi nhân viên kho tiến hành quét mác sản phẩm.
+              </div>
+
+              {/* KHUNG HIỂN THỊ CAMERA (Chỉ hiện khi bấm nút Quét) */}
+              {isScanningCamera && (
+                <div className="relative border-4 border-purple-500 rounded-lg overflow-hidden mb-4 shadow-[0_0_15px_rgba(147,51,234,0.5)]">
+                  <div id="qr-reader" className="w-full"></div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsScanningCamera(false)}
+                    className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded text-sm z-10 font-bold"
+                  >
+                    Đóng Camera
+                  </button>
+                </div>
+              )}
+
+              {/* Ô NHẬP ID CÓ TÍCH HỢP NÚT QUÉT */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mã sản phẩm (RFID/Barcode UID):</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={iotData.productId}
+                    onChange={(e) => setIotData({...iotData, productId: e.target.value})}
+                    placeholder="Copy ID hoặc quét mã..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500 focus:border-purple-500 font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsScanningCamera(!isScanningCamera)}
+                    className={`${isScanningCamera ? 'bg-gray-500' : 'bg-blue-600'} text-white px-4 py-2 rounded-lg font-bold shadow transition-colors active:scale-95 whitespace-nowrap`}
+                  >
+                    📷 Quét
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Size:</label>
+                  <input
+                    type="text"
+                    required
+                    value={iotData.size}
+                    onChange={(e) => setIotData({...iotData, size: e.target.value})}
+                    placeholder="VD: M"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Màu sắc:</label>
+                  <input
+                    type="text"
+                    required
+                    value={iotData.color}
+                    onChange={(e) => setIotData({...iotData, color: e.target.value})}
+                    placeholder="VD: Đen"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Hành động:</label>
+                  <select
+                    value={iotData.action}
+                    onChange={(e) => setIotData({...iotData, action: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-50 focus:ring-purple-500"
+                  >
+                    <option value="import">📥 Quét Nhập Kho</option>
+                    <option value="export">📤 Quét Xuất Kho</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={iotData.quantity}
+                    onChange={(e) => setIotData({...iotData, quantity: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end">
+                <button
+                  type="submit"
+                  disabled={scanning}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 w-full font-bold flex justify-center items-center shadow-lg transition-transform active:scale-95">
+                
+                  {scanning ? 'Đang truyền tín hiệu...' : 'BÍP! (Gửi tín hiệu)'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default AdminProducts; 
+export default AdminProducts;

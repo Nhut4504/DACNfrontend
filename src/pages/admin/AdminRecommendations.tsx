@@ -207,7 +207,7 @@ const AdminRecommendations: React.FC = () => {
   const [topConvertingCollapsed, setTopConvertingCollapsed] = useState(false);
 
   // Configuration
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api`;
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#4ECDC4'];
 
   // Get auth token

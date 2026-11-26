@@ -40,7 +40,7 @@ const HeroBanner: React.FC = React.memo(() => {
     {
       id: 1,
       image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&q=80',
-      title: 'Summer Collection 2025',
+      title: 'Summer Collection 2026',
       subtitle: 'Phong cách mùa hè sôi động',
       description: 'Khám phá BST mới với hơn 500+ mẫu thiết kế độc đáo',
       cta: 'Khám phá ngay',
@@ -492,7 +492,7 @@ const Footer: React.FC = () => {
         <div className="px-8 lg:px-16">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <p className="text-gray-500 text-sm">
-              © 2025 FashionShop. Tất cả quyền được bảo lưu.
+              © 2026 FashionShop. Tất cả quyền được bảo lưu.
             </p>
             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
               <Link to="/privacy" className="hover:text-white transition-colors">Chính sách bảo mật</Link>

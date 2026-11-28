@@ -132,7 +132,7 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
+           {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -144,9 +144,15 @@ const Login: React.FC = () => {
                   Ghi nhớ đăng nhập
                 </label>
               </div>
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+              <button
+                type="button"
+                onClick={() =>
+                  alert('Vui lòng liên hệ Quản trị viên (Admin) qua Live Chat hoặc Email admin@gmail.com để được hỗ trợ cấp lại mật khẩu!')
+                }
+                className="text-sm text-blue-600 hover:text-blue-500 font-medium focus:outline-none"
+              >
                 Quên mật khẩu?
-              </Link>
+              </button>
             </div>
 
             {/* Submit Button */}
